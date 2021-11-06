@@ -56,9 +56,14 @@ network:
 dataSources:
   - name: main
     kind: substrate/Runtime
-    startBlock: 1
+    startBlock: 10000
     mapping:
       handlers:
+        - handler: handlePayoutStakers
+          kind: substrate/CallHandler
+          filter:
+            module: staking
+            method: payoutStakers
         - handler: handleBond
           kind: substrate/EventHandler
           filter:

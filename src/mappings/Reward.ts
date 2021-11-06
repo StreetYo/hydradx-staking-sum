@@ -1,5 +1,5 @@
 import {SumReward} from '../types/models/SumReward';
-import {SubstrateEvent} from "@subql/types";
+import {SubstrateEvent, SubstrateExtrinsic} from "@subql/types";
 import {Balance} from '@polkadot/types/interfaces';
 import {NoBondRecordAccount} from "../types/models/NoBondRecordAccount";
 
