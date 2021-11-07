@@ -4,7 +4,6 @@ import {Balance} from '@polkadot/types/interfaces';
 const md5 = require('md5');
 
 async function getValidatorFromRewardEvent(event: SubstrateEvent) {
-    logger.info(event.extrinsic.extrinsic.method.toString());
     if(event.extrinsic.extrinsic.method.method.toString() === 'payoutStakers') {
         const [validator, era] = event.extrinsic.extrinsic.args;
         return [validator.toString(), false];
@@ -12,14 +11,14 @@ async function getValidatorFromRewardEvent(event: SubstrateEvent) {
 
     const {event: {data: [account, newReward]}} = event;
     const [calls] = event.extrinsic.extrinsic.args;
-    const era = event.extrinsic.extrinsic.era.toNumber();
+    let era = await getBlockEra(event.block);
 
     let validators = [];
 
     // @ts-ignore
     calls.map(function(call) {
         if(call.method.toString() === 'payoutStakers') {
-            let [validator, era] = call.args;
+            let [validator, callEra] = call.args;
             validators.push(validator.toString());
         }
     });
@@ -40,7 +39,7 @@ async function getValidatorFromRewardEvent(event: SubstrateEvent) {
     let stakeValidators = [];
 
     for (let validator of validators) {
-        let nominatedStake = await getNominatedStake(account.toString(), validator, era);
+        let nominatedStake = await getNominatedStake(account.toString(), validator.toString(), era);
         if(nominatedStake !== undefined) {
             stakes.push(nominatedStake);
             stakeValidators.push(nominatedStake.validator);
@@ -113,7 +112,7 @@ async function loadNominatedStakes(block: SubstrateBlock, validator: string, era
             nominatedStake = new NominatedStake(id);
             nominatedStake.account = accountId.toString();
             nominatedStake.validator = validator.toString();
-            nominatedStake.era = parseInt(era.toString());
+            nominatedStake.era = era;
             nominatedStake.nominated = nominator.value.toBigInt();
             await nominatedStake.save();
         }
@@ -122,7 +121,8 @@ async function loadNominatedStakes(block: SubstrateBlock, validator: string, era
 
 export async function handlePayoutStakers(extrinsic: SubstrateExtrinsic): Promise<void> {
     let [validator, era] = extrinsic.extrinsic.args;
-    await loadNominatedStakes(extrinsic.block, validator.toString(), era.toString());
+    era = await getBlockEra(extrinsic.block);
+    await loadNominatedStakes(extrinsic.block, validator.toString(), era);
 }
 
 export async function handleStakingRewarded(event: SubstrateEvent): Promise<void> {
@@ -136,7 +136,7 @@ export async function handleStakingReward(event: SubstrateEvent): Promise<void> 
     entity.accountId = account.toString();
     entity.balance = (newReward as Balance).toBigInt();
     entity.date = event.block.timestamp;
-    entity.era = event.extrinsic.extrinsic.era.toNumber();
+    entity.era = await getBlockEra(event.block);
 
     const [validator, multiple] = await getValidatorFromRewardEvent(event);
 
@@ -158,3 +158,22 @@ export async function handleStakingSlash(event: SubstrateEvent): Promise<void> {
     entity.date = event.block.timestamp;
     await entity.save();
 }
+
+const getBlockEra = (function () {
+    let lastBlock = undefined;
+    let lastEra = undefined;
+
+    return async function (block: SubstrateBlock) {
+        let blockNumber = block.block.header.number.toNumber();
+
+        if(blockNumber != lastBlock) {
+            let era = await api.query.staking.activeEra();
+            //@ts-ignore
+            era = era.toHuman().index;
+            lastEra = era;
+            lastBlock = blockNumber;
+        }
+
+        return lastEra;
+    }
+})();
