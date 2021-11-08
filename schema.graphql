@@ -26,7 +26,6 @@ type StakingReward @entity{
   account: SumReward!
   balance: BigInt!
   validator: ID
-  multiple: Boolean
   era: Int
   date: Date!
 }
@@ -43,6 +42,6 @@ type NominatedStake @entity {
   id: ID! #md5(accountValidatorEra)
   account: ID!
   validator: ID
-  era: Int!
+  era: Int
   nominated: BigInt
 }

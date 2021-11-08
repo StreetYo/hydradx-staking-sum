@@ -56,14 +56,9 @@ network:
 dataSources:
   - name: main
     kind: substrate/Runtime
-    startBlock: 10000
+    startBlock: 0
     mapping:
       handlers:
-        - handler: handlePayoutStakers
-          kind: substrate/CallHandler
-          filter:
-            module: staking
-            method: payoutStakers
         - handler: handleBond
           kind: substrate/EventHandler
           filter:
@@ -89,16 +84,6 @@ dataSources:
           filter:
             module: staking
             method: Slashed
-        - handler: handleStakingReward
-          kind: substrate/EventHandler
-          filter:
-            module: staking
-            method: Reward
-        - handler: handleStakingRewarded
-          kind: substrate/EventHandler
-          filter:
-            module: staking
-            method: Rewarded
         - handler: handleStakingSlash
           kind: substrate/EventHandler
           filter:
@@ -109,3 +94,13 @@ dataSources:
           filter:
             module: staking
             method: Slashed
+        - handler: handlePayoutStakers
+          kind: substrate/CallHandler
+          filter:
+            module: staking
+            method: payoutStakers
+        - handler: handlePayoutStakersBatch
+          kind: substrate/CallHandler
+          filter:
+            module: utility
+            method: batch
