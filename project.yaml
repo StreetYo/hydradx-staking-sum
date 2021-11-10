@@ -56,7 +56,7 @@ network:
 dataSources:
   - name: main
     kind: substrate/Runtime
-    startBlock: 20000
+    startBlock: 26000
     mapping:
       handlers:
         - handler: handleBond
