@@ -81,6 +81,9 @@ export async function handlePayoutStakersBatch(extrinsic: SubstrateExtrinsic): P
     }
 
     for (let validatorI in validators) {
+        if (currentEvent === rewards.length)
+            break;
+
         if (rewards[currentEvent].account === validators[validatorI].validator) {
             validators[validatorI].rewards.push(rewards[currentEvent]);
             currentEvent++;
