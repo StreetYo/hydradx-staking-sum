@@ -45,3 +45,10 @@ type NominatedStake @entity {
   era: Int
   nominated: BigInt
 }
+
+type NominatedAmount @entity {
+  id: ID! #md5(accountEra)
+  account: String!
+  era: Int
+  amount: BigInt
+}
