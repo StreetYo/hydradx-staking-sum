@@ -105,6 +105,10 @@ async function loadLockedBalancesByNominators(nominators, era) {
 
     // @ts-ignore
     for (let nominatorI in nominators) {
+        if(nominators[nominatorI] == undefined || nominators[nominatorI].length < 20) {
+            continue;
+        }
+
         await createNominatedAmount(
             nominators[nominatorI],
             era,
