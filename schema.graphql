@@ -25,7 +25,7 @@ type StakingReward @entity{
   id: ID! #blockHeight-eventIdx
   account: SumReward!
   balance: BigInt!
-  validator: ID
+  validator: String
   era: Int
   date: Date!
 }
@@ -40,8 +40,8 @@ type StakingSlash @entity{
 
 type NominatedStake @entity {
   id: ID! #md5(accountValidatorEra)
-  account: ID!
-  validator: ID
+  account: String!
+  validator: String
   era: Int
   nominated: BigInt
 }

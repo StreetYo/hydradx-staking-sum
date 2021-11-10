@@ -1,6 +1,7 @@
 import {NominatedStake, StakingReward, StakingSlash} from '../types/models';
 import {SubstrateBlock, SubstrateEvent, SubstrateExtrinsic} from "@subql/types";
 import {Balance} from '@polkadot/types/interfaces';
+
 const md5 = require('md5');
 
 async function getNominatedStake(accountId, validator, era) {
@@ -8,14 +9,70 @@ async function getNominatedStake(accountId, validator, era) {
     return await NominatedStake.get(id);
 }
 
-async function loadNominatedStakes(validator: string, era) {
+async function loadNominatorsStakes(nominators, era) {
+    let nominatorsValidators = await api.query.staking.nominators.multi(nominators);
+
+    for (let nominatorValidatorsI in nominatorsValidators) {
+        let validators = nominatorsValidators[nominatorValidatorsI].toHuman();
+
+        if (validators == null) {
+            continue;
+        }
+
+        //@ts-ignore
+        for (let validator of validators.targets) {
+            await loadNominatorStake(nominators[nominatorValidatorsI], validator.toString(), era);
+        }
+    }
+}
+
+async function loadNominatorStakes(nominator: string, era) {
+    let validators = await api.query.staking.nominators(nominator);
+
+    if (validators.toHuman() == null) {
+        return;
+    }
+
+    //@ts-ignore
+    for (let validator of validators.toHuman().targets) {
+        await loadNominatorStake(nominator, validator.toString(), era);
+    }
+}
+
+
+async function loadNominatorStake(account: string, validator: string, era) {
+    era = parseInt(era);
+
+    if(account !== undefined) {
+        let stake = await getNominatedStake(account, validator, era);
+        if(stake !== undefined) {
+            return;
+        }
+    }
+
+    let nominators = await api.query.staking.erasStakers(era, validator);
+
+    // @ts-ignore
+    for (let nominator of nominators.others) {
+        if(nominator.who.toString === account) {
+            await createNominatedStake(
+                era,
+                nominator.who.toString(),
+                validator.toString(),
+                nominator.value.toBigInt()
+            );
+        }
+    }
+}
+
+async function loadNominatedStakes(validator: string, era, nominator = undefined) {
     era = parseInt(era);
 
     let nominators = await api.query.staking.erasStakers(era, validator);
     let nomins = [];
 
     // @ts-ignore
-    for(let nominator of nominators.others) {
+    for (let nominator of nominators.others) {
         await createNominatedStake(
             era,
             nominator.who.toString(),
@@ -54,7 +111,7 @@ async function createNominatedStake(era, accountId, validator, nominated) {
     let id = md5(accountId + validator + era);
     let nominatedStake = await NominatedStake.get(id);
 
-    if(nominatedStake === undefined) {
+    if (nominatedStake === undefined) {
         nominatedStake = new NominatedStake(id);
         nominatedStake.account = accountId;
         nominatedStake.validator = validator;
@@ -70,7 +127,7 @@ export async function handlePayoutStakersBatch(extrinsic: SubstrateExtrinsic): P
     let validatorsNominators = [];
     let calls = [];
 
-    if(extrinsic.extrinsic.method.method.toString().toLowerCase() === 'batch') {
+    if (extrinsic.extrinsic.method.method.toString().toLowerCase() === 'batch') {
         let [extrCalls] = extrinsic.extrinsic.args;
         // @ts-ignore
         calls = extrCalls;
@@ -80,12 +137,12 @@ export async function handlePayoutStakersBatch(extrinsic: SubstrateExtrinsic): P
 
     let rewards = getRewardsFromExtrinsic(extrinsic);
 
-    if(rewards.length === 0) {
+    if (rewards.length === 0) {
         return;
     }
 
     for (let call of calls) {
-        if(call.method.toString() === 'payoutStakers') {
+        if (call.method.toString() === 'payoutStakers') {
             let [validator, callEra] = call.args;
 
             validatorsNominators.push(
@@ -100,18 +157,18 @@ export async function handlePayoutStakersBatch(extrinsic: SubstrateExtrinsic): P
         }
     }
 
-    if(validators.length === 0) {
+    if (validators.length === 0) {
         return;
     }
 
-    for(let validatorI in validators) {
-        if(rewards[currentEvent].account === validators[validatorI].validator) {
+    for (let validatorI in validators) {
+        if (rewards[currentEvent].account === validators[validatorI].validator) {
             validators[validatorI].rewards.push(rewards[currentEvent]);
             currentEvent++;
         }
 
-        for(let nominator of validatorsNominators[validatorI]) {
-            if(
+        for (let nominator of validatorsNominators[validatorI]) {
+            if (
                 currentEvent === rewards.length ||
                 rewards[currentEvent].account !== nominator.who
             ) break;
@@ -127,7 +184,7 @@ export async function handlePayoutStakersBatch(extrinsic: SubstrateExtrinsic): P
 function getRewardsFromExtrinsic(extrinsic: SubstrateExtrinsic) {
     let rewards = [];
 
-    for(let [index, event] of extrinsic.events.entries()) {
+    for (let [index, event] of extrinsic.events.entries()) {
         if (event.event.method.toString().toLowerCase() === 'reward') {
             const {event: {data: [account, newReward]}} = event;
             rewards.push({
@@ -145,7 +202,7 @@ function getRewardsFromExtrinsic(extrinsic: SubstrateExtrinsic) {
 export async function handlePayoutStakers(extrinsic: SubstrateExtrinsic): Promise<void> {
     let rewards = getRewardsFromExtrinsic(extrinsic);
 
-    if(rewards.length === 0) {
+    if (rewards.length === 0) {
         return;
     }
 
@@ -160,9 +217,11 @@ export async function handlePayoutStakers(extrinsic: SubstrateExtrinsic): Promis
 }
 
 async function saveValidatorsWithRewards(validatorsWithRewards) {
-    for(let validator of validatorsWithRewards) {
-        for(let reward of validator.rewards) {
+    for (let validator of validatorsWithRewards) {
+        for (let reward of validator.rewards) {
             const entity = new StakingReward(reward.id);
+
+            await loadNominatorStakes(reward.account, validator.era);
 
             entity.accountId = reward.account;
             entity.balance = reward.reward;
@@ -176,7 +235,7 @@ async function saveValidatorsWithRewards(validatorsWithRewards) {
 }
 
 async function getValidatorFromRewardEvent(event: SubstrateEvent) {
-    if(event.extrinsic.extrinsic.method.method.toString() === 'payoutStakers') {
+    if (event.extrinsic.extrinsic.method.method.toString() === 'payoutStakers') {
         const [validator, era] = event.extrinsic.extrinsic.args;
         //@ts-ignore
         return [era.toNumber(), validator.toString(), false];
@@ -189,8 +248,8 @@ async function getValidatorFromRewardEvent(event: SubstrateEvent) {
     let validators = [];
 
     // @ts-ignore
-    calls.map(function(call) {
-        if(call.method.toString() === 'payoutStakers') {
+    calls.map(function (call) {
+        if (call.method.toString() === 'payoutStakers') {
             let [validator, callEra] = call.args;
             validators.push({
                 validator: validator.toString(),
@@ -199,9 +258,9 @@ async function getValidatorFromRewardEvent(event: SubstrateEvent) {
         }
     });
 
-    if(validators.length === 0) {
+    if (validators.length === 0) {
         return [null, null, false];
-    } else if(validators.length === 1) {
+    } else if (validators.length === 1) {
         return [validators[0].era, validators[0].validator, false];
     }
 
@@ -209,7 +268,7 @@ async function getValidatorFromRewardEvent(event: SubstrateEvent) {
         return validator === account.toString();
     });
 
-    if(search !== undefined) {
+    if (search !== undefined) {
         return [validators[search].era, account.toString(), false];
     }
 
@@ -218,7 +277,7 @@ async function getValidatorFromRewardEvent(event: SubstrateEvent) {
 
     for (let validator of validators) {
         let nominatedStake = await getNominatedStake(account.toString(), validator.toString(), era);
-        if(nominatedStake !== undefined) {
+        if (nominatedStake !== undefined) {
             stakes.push(nominatedStake);
             stakeValidators.push(nominatedStake.validator);
         }
@@ -229,21 +288,21 @@ async function getValidatorFromRewardEvent(event: SubstrateEvent) {
     throw new Error('just');
 
 
-    if(stakes.length === 0) {
+    if (stakes.length === 0) {
         return [validators.join(':'), true];
-    } else if(stakes.length === 1) {
+    } else if (stakes.length === 1) {
         return [stakes[0].validator, false];
     }
 
     let accountRewardEvents = [];
 
     event.extrinsic.events.map(function (item, index) {
-        if(['Reward', 'Rewarded'].indexOf(item.event.method.toString()) === -1) {
+        if (['Reward', 'Rewarded'].indexOf(item.event.method.toString()) === -1) {
             return;
         }
 
         const {event: {data: [itemAccount, itemNewReward]}} = item
-        if(itemAccount == account) {
+        if (itemAccount == account) {
             accountRewardEvents.push({
                 account: itemAccount.toString(),
                 reward: (itemNewReward as Balance).toBigInt()
@@ -251,17 +310,17 @@ async function getValidatorFromRewardEvent(event: SubstrateEvent) {
         }
     });
 
-    if(accountRewardEvents.length === 1) {
+    if (accountRewardEvents.length === 1) {
         return [stakeValidators.join(':'), true];
     }
 
     // more than 1 rewards and more than 1 validators
     // rewards count = stakes count
-    stakeValidators.sort(function(a, b) {
+    stakeValidators.sort(function (a, b) {
         return a.nominated - b.nominated;
     });
 
-    accountRewardEvents.sort(function(a, b) {
+    accountRewardEvents.sort(function (a, b) {
         return a.reward - b.reward;
     });
 
@@ -294,7 +353,7 @@ const getBlockEra = (function () {
     return async function (block: SubstrateBlock) {
         let blockNumber = block.block.header.number.toNumber();
 
-        if(blockNumber != lastBlock) {
+        if (blockNumber != lastBlock) {
             let era = await api.query.staking.activeEra();
             //@ts-ignore
             era = era.toHuman().index;
