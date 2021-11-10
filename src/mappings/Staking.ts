@@ -104,6 +104,11 @@ export async function handlePayoutStakersBatch(extrinsic: SubstrateExtrinsic): P
 
 async function loadLockedBalancesByNominators(nominators, era) {
     logger.info('loadLockedBalancesByNominators');
+
+    if(!Array.isArray(nominators)) {
+        return;
+    }
+
     // @ts-ignore
     let balances = await api.query.balances.locks.multi(nominators);
 
