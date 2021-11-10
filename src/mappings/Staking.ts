@@ -18,6 +18,7 @@ export async function handleStakingSlash(event: SubstrateEvent): Promise<void> {
 }
 
 export async function handlePayoutStakers(extrinsic: SubstrateExtrinsic): Promise<void> {
+    logger.info('handlePayoutStakers');
     let rewards = getRewardsFromExtrinsic(extrinsic);
 
     if (rewards.length === 0) {
@@ -38,6 +39,8 @@ export async function handlePayoutStakers(extrinsic: SubstrateExtrinsic): Promis
 }
 
 export async function handlePayoutStakersBatch(extrinsic: SubstrateExtrinsic): Promise<void> {
+    logger.info('handlePayoutStakersBatch');
+
     let validators = [];
     let currentEvent = 0;
     let validatorsNominators = [];
@@ -100,6 +103,7 @@ export async function handlePayoutStakersBatch(extrinsic: SubstrateExtrinsic): P
 
 
 async function loadLockedBalancesByNominators(nominators, era) {
+    logger.info('loadLockedBalancesByNominators');
     // @ts-ignore
     let balances = await api.query.balances.locks.multi(nominators);
 
@@ -118,6 +122,7 @@ async function loadLockedBalancesByNominators(nominators, era) {
 }
 
 async function loadNominatedStakes(validator: string, era) {
+    logger.info('loadNominatedStakes');
     era = parseInt(era);
 
     let nominators = await api.query.staking.erasStakers(era, validator);
@@ -159,6 +164,8 @@ async function loadNominatedStakes(validator: string, era) {
 }
 
 async function createNominatedStake(era, accountId, validator, nominated) {
+    logger.info('createNominatedStake');
+
     let id = md5(accountId + validator + era);
     let nominatedStake = await NominatedStake.get(id);
 
@@ -173,6 +180,7 @@ async function createNominatedStake(era, accountId, validator, nominated) {
 }
 
 async function createNominatedAmount(account, era, amount) {
+    logger.info('createNominatedAmount');
     let id = md5(account + era);
     let nominatedStake = await NominatedAmount.get(id);
 
@@ -186,6 +194,8 @@ async function createNominatedAmount(account, era, amount) {
 }
 
 function getRewardsFromExtrinsic(extrinsic: SubstrateExtrinsic) {
+    logger.info('getRewardsFromExtrinsic');
+
     let rewards = [];
 
     for (let [index, event] of extrinsic.events.entries()) {
@@ -204,6 +214,7 @@ function getRewardsFromExtrinsic(extrinsic: SubstrateExtrinsic) {
 }
 
 async function saveValidatorsWithRewards(validatorsWithRewards) {
+    logger.info('saveValidatorsWithRewards');
     for (let validator of validatorsWithRewards) {
         for (let reward of validator.rewards) {
             const entity = new StakingReward(reward.id);
