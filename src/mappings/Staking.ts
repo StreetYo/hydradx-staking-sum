@@ -192,23 +192,37 @@ async function createNominatedAmount(account, era, amount) {
     }
 }
 
-function getRewardsFromExtrinsic(extrinsic: SubstrateExtrinsic) {
-    let rewards = [];
+const getRewardsFromExtrinsic = (() => {
+    let lastBlock = undefined;
+    let lastEvent = undefined;
 
-    for (let [index, event] of extrinsic.events.entries()) {
-        if (event.event.method.toString().toLowerCase() === 'reward') {
-            const {event: {data: [account, newReward]}} = event;
-            rewards.push({
-                account: account.toString(),
-                reward: (newReward as Balance).toBigInt(),
-                id: `${extrinsic.block.block.header.number.toString()}-${index.toString()}`,
-                date: extrinsic.block.timestamp
-            })
+    return (extrinsic: SubstrateExtrinsic) => {
+        let blockNumber = extrinsic.block.block.header.number.toNumber();
+
+        if(lastBlock !== blockNumber) {
+            lastBlock = blockNumber;
+            lastEvent = 0;
         }
-    }
 
-    return rewards;
-}
+        let rewards = [];
+
+        for (let [index, event] of extrinsic.events.entries()) {
+            if (event.event.method.toString().toLowerCase() === 'reward') {
+                const {event: {data: [account, newReward]}} = event;
+                rewards.push({
+                    account: account.toString(),
+                    reward: (newReward as Balance).toBigInt(),
+                    id: `${lastBlock}-${lastEvent.toString()}`,
+                    date: extrinsic.block.timestamp
+                })
+            }
+
+            lastEvent++;
+        }
+
+        return rewards;
+    }
+})();
 
 async function saveValidatorsWithRewards(validatorsWithRewards) {
     for (let validator of validatorsWithRewards) {
