@@ -42,6 +42,7 @@ export async function handlePayoutStakersBatch(extrinsic: SubstrateExtrinsic): P
     let currentEvent = 0;
     let validatorsNominators = [];
     let calls = [];
+    let blockNumber = extrinsic.block.block.header.number.toNumber();
 
     if (extrinsic.extrinsic.method.method.toString().toLowerCase() === 'batch') {
         let [extrCalls] = extrinsic.extrinsic.args;
@@ -80,6 +81,18 @@ export async function handlePayoutStakersBatch(extrinsic: SubstrateExtrinsic): P
     for (let validatorI in validators) {
         if (currentEvent === rewards.length)
             break;
+
+        if(blockNumber > 216624) {
+            validatorsNominators[validatorI].sort(function(a, b) {
+                if (a.value > b.value)
+                    return -1;
+
+                if (a.value < b.value)
+                    return 1;
+
+                return 0;
+            });
+        }
 
         if (rewards[currentEvent].account === validators[validatorI].validator) {
             validators[validatorI].rewards.push(rewards[currentEvent]);
