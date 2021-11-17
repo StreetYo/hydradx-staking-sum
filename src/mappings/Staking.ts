@@ -82,21 +82,15 @@ export async function handlePayoutStakersBatch(extrinsic: SubstrateExtrinsic): P
         if (currentEvent === rewards.length)
             break;
 
-        if(blockNumber > 216624) {
-            validatorsNominators[validatorI].sort(function(a, b) {
-                if (a.value > b.value)
-                    return -1;
-
-                if (a.value < b.value)
-                    return 1;
-
-                return 0;
-            });
-        }
-
         if (rewards[currentEvent].account === validators[validatorI].validator) {
             validators[validatorI].rewards.push(rewards[currentEvent]);
             currentEvent++;
+        }
+
+        if(validatorsNominators[validatorI][0].who !== rewards[currentEvent].account) {
+            validatorsNominators[validatorI].sort(function(a, b) {
+                return a.value > b.value ? -1 : a.value < b.value;
+            });
         }
 
         for (let nominator of validatorsNominators[validatorI]) {
