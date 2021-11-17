@@ -91,11 +91,7 @@ export async function handlePayoutStakersBatch(extrinsic: SubstrateExtrinsic): P
             continue;
         }
 
-        if(
-            validatorsNominators[validatorI][0] !== undefined &&
-            rewards[currentEvent] !== undefined &&
-            validatorsNominators[validatorI][0].who !== rewards[currentEvent].account
-        ) {
+        if(shouldSortNominators(validatorsNominators[validatorI], rewards, currentEvent)) {
             validatorsNominators[validatorI].sort(function(a, b) {
                 return a.value > b.value ? -1 : a.value < b.value;
             });
@@ -115,7 +111,21 @@ export async function handlePayoutStakersBatch(extrinsic: SubstrateExtrinsic): P
     await saveValidatorsWithRewards(validators);
 }
 
+function shouldSortNominators(nominators, rewards, rewardsPos) {
+    let count = 5;
 
+    for(let i = 0; i < count; i++) {
+        if(nominators[i] === undefined || rewards[rewardsPos + i] === undefined) {
+            return false;
+        }
+
+        if(nominators[i].who !== rewards[rewardsPos + i].account) {
+            return true;
+        }
+    }
+
+    return false;
+}
 
 async function loadLockedBalancesByNominators(nominators, era) {
     if(!Array.isArray(nominators) || nominators.length === 0) {
