@@ -87,7 +87,15 @@ export async function handlePayoutStakersBatch(extrinsic: SubstrateExtrinsic): P
             currentEvent++;
         }
 
-        if(validatorsNominators[validatorI][0].who !== rewards[currentEvent].account) {
+        if(validatorsNominators[validatorI].length === 0) {
+            continue;
+        }
+
+        if(
+            validatorsNominators[validatorI][0] !== undefined &&
+            rewards[currentEvent] !== undefined &&
+            validatorsNominators[validatorI][0].who !== rewards[currentEvent].account
+        ) {
             validatorsNominators[validatorI].sort(function(a, b) {
                 return a.value > b.value ? -1 : a.value < b.value;
             });
