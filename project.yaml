@@ -4,7 +4,6 @@ repository: ''
 schema: ./schema.graphql
 network:
   endpoint: wss://archive.snakenet.hydradx.io
-  dictionary: https://api.subquery.network/sq/StreetYo/hydradx-dictionary
 
   types: {
     "AssetPair": {
