@@ -1,7 +1,7 @@
-import {SumReward} from '../types/models/SumReward';
-import {SubstrateEvent, SubstrateExtrinsic} from "@subql/types";
+import {SumReward} from '../types/models';
+import {SubstrateEvent} from "@subql/types";
 import {Balance} from '@polkadot/types/interfaces';
-import {NoBondRecordAccount} from "../types/models/NoBondRecordAccount";
+import {NoBondRecordAccount} from "../types/models";
 
 function createSumReward(accountId: string): SumReward {
     const entity = new SumReward(accountId);
@@ -12,11 +12,11 @@ function createSumReward(accountId: string): SumReward {
 }
 
 export async function handleBond(event: SubstrateEvent): Promise<void> {
-    // const {event: {data: [account, balance]}} = event;
-    // const entity = await SumReward.get(account.toString());
-    // if (entity === undefined){
-    //     await createSumReward(account.toString()).save();
-    // }
+    const {event: {data: [account, balance]}} = event;
+    const entity = await SumReward.get(account.toString());
+    if (entity === undefined){
+        await createSumReward(account.toString()).save();
+    }
 }
 
 export async function handleRewarded(event: SubstrateEvent): Promise<void> {
