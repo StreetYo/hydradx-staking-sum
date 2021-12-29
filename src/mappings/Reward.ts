@@ -1,7 +1,7 @@
-import {SumReward} from '../types/models/SumReward';
-import {SubstrateEvent, SubstrateExtrinsic} from "@subql/types";
+import {SumReward} from '../types/models';
+import {SubstrateEvent} from "@subql/types";
 import {Balance} from '@polkadot/types/interfaces';
-import {NoBondRecordAccount} from "../types/models/NoBondRecordAccount";
+import {NoBondRecordAccount} from "../types/models";
 
 function createSumReward(accountId: string): SumReward {
     const entity = new SumReward(accountId);
