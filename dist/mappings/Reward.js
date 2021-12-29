@@ -1,10 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.handleSlash = exports.handleSlashed = exports.handleReward = exports.handleRewarded = exports.handleBond = void 0;
-const SumReward_1 = require("../types/models/SumReward");
-const NoBondRecordAccount_1 = require("../types/models/NoBondRecordAccount");
+const models_1 = require("../types/models");
+const models_2 = require("../types/models");
 function createSumReward(accountId) {
-    const entity = new SumReward_1.SumReward(accountId);
+    const entity = new models_1.SumReward(accountId);
     entity.accountReward = BigInt(0);
     entity.accountSlash = BigInt(0);
     entity.accountTotal = BigInt(0);
@@ -12,7 +12,7 @@ function createSumReward(accountId) {
 }
 async function handleBond(event) {
     const { event: { data: [account, balance] } } = event;
-    const entity = await SumReward_1.SumReward.get(account.toString());
+    const entity = await models_1.SumReward.get(account.toString());
     if (entity === undefined) {
         await createSumReward(account.toString()).save();
     }
@@ -24,12 +24,12 @@ async function handleRewarded(event) {
 exports.handleRewarded = handleRewarded;
 async function handleReward(event) {
     const { event: { data: [account, newReward] } } = event;
-    let entity = await SumReward_1.SumReward.get(account.toString());
+    let entity = await models_1.SumReward.get(account.toString());
     if (entity === undefined) {
         // in early stage of kusama, some validators didn't need to bond to start staking
         // to not break our code, we will create a SumReward record for them and log them in NoBondRecordAccount
         entity = createSumReward(account.toString());
-        const errorRecord = new NoBondRecordAccount_1.NoBondRecordAccount(account.toString());
+        const errorRecord = new models_2.NoBondRecordAccount(account.toString());
         errorRecord.firstRewardAt = event.block.block.header.number.toNumber();
         await errorRecord.save();
     }
@@ -44,12 +44,12 @@ async function handleSlashed(event) {
 exports.handleSlashed = handleSlashed;
 async function handleSlash(event) {
     const { event: { data: [account, newSlash] } } = event;
-    let entity = await SumReward_1.SumReward.get(account.toString());
+    let entity = await models_1.SumReward.get(account.toString());
     if (entity === undefined) {
         // in early stage of kusama, some validators didn't need to bond to start staking
         // to not break our code, we will create a SumReward record for them and log them in NoBondRecordAccount
         entity = createSumReward(account.toString());
-        const errorRecord = new NoBondRecordAccount_1.NoBondRecordAccount(account.toString());
+        const errorRecord = new models_2.NoBondRecordAccount(account.toString());
         errorRecord.firstRewardAt = event.block.block.header.number.toNumber();
         await errorRecord.save();
     }

@@ -107,13 +107,12 @@ async function loadLockedBalancesByNominators(nominators, era) {
         return;
     }
     // @ts-ignore
-    let balances = await api.query.balances.locks.multi(nominators);
-    // @ts-ignore
     for (let nominatorI in nominators) {
         if (nominators[nominatorI] == undefined || nominators[nominatorI].length < 20) {
             continue;
         }
-        await createNominatedAmount(nominators[nominatorI], era, balances[nominatorI][0].amount.toBigInt());
+        let balance = await api.query.balances.locks(nominators[nominatorI]);
+        await createNominatedAmount(nominators[nominatorI], era, balance[0].amount.toBigInt());
     }
 }
 async function loadNominatedStakes(validator, era) {
