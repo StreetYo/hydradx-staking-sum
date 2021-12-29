@@ -12,11 +12,11 @@ function createSumReward(accountId: string): SumReward {
 }
 
 export async function handleBond(event: SubstrateEvent): Promise<void> {
-    const {event: {data: [account, balance]}} = event;
-    const entity = await SumReward.get(account.toString());
-    if (entity === undefined){
-        await createSumReward(account.toString()).save();
-    }
+    // const {event: {data: [account, balance]}} = event;
+    // const entity = await SumReward.get(account.toString());
+    // if (entity === undefined){
+    //     await createSumReward(account.toString()).save();
+    // }
 }
 
 export async function handleRewarded(event: SubstrateEvent): Promise<void> {
